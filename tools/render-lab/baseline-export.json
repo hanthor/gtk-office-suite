@@ -5,20 +5,35 @@
   "decks/bullets": {
     "export": "green"
   },
+  "decks/text-styles": {
+    "export": "missing"
+  },
   "decks/title-layout": {
     "export": "green"
   },
   "letters/char-emphasis": {
     "export": "green"
   },
+  "letters/alignment": {
+    "export": "missing"
+  },
   "letters/font-families": {
     "export": "green"
+  },
+  "letters/font-sizes": {
+    "export": "missing"
   },
   "letters/headings": {
     "export": "green"
   },
   "letters/plain-paragraph": {
     "export": "green"
+  },
+  "letters/super-subscript": {
+    "export": "missing"
+  },
+  "letters/text-color": {
+    "export": "missing"
   },
   "letters/toc": {
     "export": "green"
