@@ -52,7 +52,7 @@ if [ -z "${RENDER_LAB_SKIP_BUILD:-}" ]; then
     if [ ${#APP_ARGS[@]} -gt 0 ]; then
         cargo build --bin "${APP_ARGS[1]}"
     else
-        cargo build --bin letters --bin decks
+        cargo build --bin letters --bin decks --bin tables
     fi
 fi
 echo "== export (our PDF, rasterized like the reference)"

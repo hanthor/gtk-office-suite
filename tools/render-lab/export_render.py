@@ -24,10 +24,10 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import capture
 
-# Apps with a headless --export-pdf hook (spec item 1). xlsx is out of
-# scope, so Tables has no hook and an export:true tables fixture is a
-# manifest bug, reported loudly rather than silently skipped.
-EXPORT_APPS = ("letters", "decks")
+# Apps with a headless --export-pdf hook (spec item 1, plus the Tables
+# carve-out in docs/TABLES-EXPORT-PARITY.md). An export:true fixture on any
+# other app is a manifest bug, reported loudly rather than silently skipped.
+EXPORT_APPS = ("letters", "decks", "tables")
 DPI = 96
 
 

@@ -42,10 +42,11 @@ NEEDS = {
 
 
 # Fixtures whose own PDF export is pixel-compared against LibreOffice's PDF
-# of the same file (docs/EXPORT-PARITY-SPEC.md). Opt-in, docx/pptx only,
-# starting small: fixtures with green screenshot baselines, so an export
-# diff measures the exporter and not the on-screen renderer. xlsx is out
-# of scope (spreadsheets are not a published rendered artifact).
+# of the same file (docs/EXPORT-PARITY-SPEC.md). Opt-in, starting small:
+# fixtures with green screenshot baselines, so an export diff measures the
+# exporter and not the on-screen renderer. xlsx is out of scope
+# (spreadsheets are not a published rendered artifact) apart from the three
+# both-green tables fixtures carved out by docs/TABLES-EXPORT-PARITY.md.
 EXPORT = {
     "letters/plain-paragraph",
     "letters/toc",
@@ -82,6 +83,12 @@ EXPORT = {
     "letters/footnotes",
     "letters/footnote-continued",
     "letters/nested-list",
+    # Tables carve-out (docs/TABLES-EXPORT-PARITY.md): only the three
+    # both-green screenshot fixtures, so an export diff measures the
+    # exporter and not the on-screen renderer.
+    "tables/values",
+    "tables/merged",
+    "tables/frozen",
 }
 
 
