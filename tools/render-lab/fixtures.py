@@ -42,11 +42,19 @@ NEEDS = {
 
 
 # Fixtures whose own PDF export is pixel-compared against LibreOffice's PDF
-# of the same file (docs/EXPORT-PARITY-SPEC.md). Opt-in, starting small:
-# fixtures with green screenshot baselines, so an export diff measures the
-# exporter and not the on-screen renderer. xlsx is out of scope
-# (spreadsheets are not a published rendered artifact) apart from the three
-# both-green tables fixtures carved out by docs/TABLES-EXPORT-PARITY.md.
+# of the same file (docs/EXPORT-PARITY-SPEC.md). Opt-in, docx/pptx only,
+# starting small: fixtures with green screenshot baselines, so an export
+# diff measures the exporter and not the on-screen renderer. xlsx is out
+# of scope (spreadsheets are not a published rendered artifact).
+#
+# NOTE (docs/TABLES-EXPORT-PARITY.md carve-out, not yet opted in): the
+# Tables --export-pdf hook exists, but no tables fixture is opted in
+# because none can honestly go green: Calc prints black gridlines whenever
+# it prints row/column headings (which the fixtures must print to match
+# our always-drawn headers), while the hook draws show_gridlines=false
+# like the judged on-screen layout. Drawing gridlines only in the export
+# would make the diff measure a deliberate renderer difference, against
+# the opt-in rule — so the fixtures stay out until that is resolved.
 EXPORT = {
     "letters/plain-paragraph",
     "letters/toc",
@@ -83,12 +91,6 @@ EXPORT = {
     "letters/footnotes",
     "letters/footnote-continued",
     "letters/nested-list",
-    # Tables carve-out (docs/TABLES-EXPORT-PARITY.md): only the three
-    # both-green screenshot fixtures, so an export diff measures the
-    # exporter and not the on-screen renderer.
-    "tables/values",
-    "tables/merged",
-    "tables/frozen",
 }
 
 
