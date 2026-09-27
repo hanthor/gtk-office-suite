@@ -2,40 +2,25 @@
   "decks/autofit": {
     "export": "green"
   },
+  "decks/background": {
+    "export": "green"
+  },
   "decks/bullets": {
-    "export": "green"
-  },
-  "decks/text-styles": {
-    "export": "green"
-  },
-  "decks/shapes": {
     "export": "green"
   },
   "decks/image": {
     "export": "green"
   },
-  "letters/bullet-list": {
-    "export": "green"
-  },
-  "letters/numbered-list": {
-    "export": "green"
-  },
-  "letters/columns": {
-    "export": "green"
-  },
-  "decks/background": {
-    "export": "green"
-  },
   "decks/rotation": {
+    "export": "green"
+  },
+  "decks/shapes": {
     "export": "green"
   },
   "decks/table": {
     "export": "green"
   },
-  "letters/header-footer": {
-    "export": "green"
-  },
-  "letters/page-numbers": {
+  "decks/text-styles": {
     "export": "green"
   },
   "decks/title-layout": {
@@ -44,7 +29,13 @@
   "letters/alignment": {
     "export": "green"
   },
+  "letters/bullet-list": {
+    "export": "green"
+  },
   "letters/char-emphasis": {
+    "export": "green"
+  },
+  "letters/columns": {
     "export": "green"
   },
   "letters/font-families": {
@@ -53,7 +44,46 @@
   "letters/font-sizes": {
     "export": "green"
   },
+  "letters/footnotes": {
+    "export": "green"
+  },
+  "letters/header-footer": {
+    "export": "green"
+  },
   "letters/headings": {
+    "export": "green"
+  },
+  "letters/highlight": {
+    "export": "green"
+  },
+  "letters/image": {
+    "export": "green"
+  },
+  "letters/indents": {
+    "export": "green"
+  },
+  "letters/landscape": {
+    "export": "green"
+  },
+  "letters/line-spacing": {
+    "export": "green"
+  },
+  "letters/numbered-list": {
+    "export": "green"
+  },
+  "letters/page-break": {
+    "export": "green"
+  },
+  "letters/page-margins": {
+    "export": "green"
+  },
+  "letters/page-numbers": {
+    "export": "green"
+  },
+  "letters/pagination": {
+    "export": "green"
+  },
+  "letters/paragraph-spacing": {
     "export": "green"
   },
   "letters/plain-paragraph": {
@@ -66,21 +96,6 @@
     "export": "green"
   },
   "letters/toc": {
-    "export": "green"
-  },
-  "letters/highlight": {
-    "export": "green"
-  },
-  "letters/image": {
-    "export": "green"
-  },
-  "letters/indents": {
-    "export": "green"
-  },
-  "letters/line-spacing": {
-    "export": "green"
-  },
-  "letters/paragraph-spacing": {
     "export": "green"
   }
 }
