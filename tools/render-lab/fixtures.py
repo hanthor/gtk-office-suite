@@ -75,6 +75,11 @@ EXPORT = {
     "letters/indents",
     "letters/line-spacing",
     "letters/paragraph-spacing",
+    "letters/page-margins",
+    "letters/landscape",
+    "letters/page-break",
+    "letters/pagination",
+    "letters/footnotes",
 }
 
 
