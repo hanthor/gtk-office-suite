@@ -773,10 +773,11 @@ mod tests {
         let text = String::from_utf8_lossy(&bytes);
         let page_objects = text.matches("/Type /Page").count() - text.matches("/Type /Pages").count();
         assert_eq!(page_objects, 1, "one PDF page for the sheet");
-        // /MediaBox is the rect in points (pixels x 72/96); Cairo prints
-        // whole numbers without decimals, so parse rather than match text.
+        // /MediaBox is the rect in points (pixels x 72/96); Cairo may
+        // print fractional points, so parse rather than match text.
         let mb = text.find("/MediaBox").expect("a sized page");
-        let nums: Vec<f64> = text[mb..mb + 64]
+        let box_text = text[mb..].split(']').next().expect("a closed MediaBox");
+        let nums: Vec<f64> = box_text
             .split(|ch: char| !(ch.is_ascii_digit() || ch == '.'))
             .filter(|s| !s.is_empty())
             .filter_map(|s| s.parse().ok())
