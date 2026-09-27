@@ -52,9 +52,14 @@ EXPORT = {
     "letters/char-emphasis",
     "letters/headings",
     "letters/font-families",
+    "letters/font-sizes",
+    "letters/text-color",
+    "letters/super-subscript",
+    "letters/alignment",
     "decks/autofit",
     "decks/title-layout",
     "decks/bullets",
+    "decks/text-styles",
 }
 
 
