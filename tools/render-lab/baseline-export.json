@@ -44,6 +44,9 @@
   "letters/font-sizes": {
     "export": "green"
   },
+  "letters/footnote-continued": {
+    "export": "green"
+  },
   "letters/footnotes": {
     "export": "green"
   },
@@ -67,6 +70,9 @@
   },
   "letters/line-spacing": {
     "export": "green"
+  },
+  "letters/nested-list": {
+    "export": "amber"
   },
   "letters/numbered-list": {
     "export": "green"
