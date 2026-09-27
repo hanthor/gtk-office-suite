@@ -697,11 +697,11 @@ pub fn render_sheet_pdf(
     }
     // PDF points are 1/72in; the grid draws in 1/96in pixels.
     let (page_w, page_h) = (w * 72.0 / 96.0, h * 72.0 / 96.0);
-    let surface = gtk4::cairo::PdfSurface::new(page_w, page_h, path)
+    let surface = cairo::PdfSurface::new(page_w, page_h, path)
         .map_err(|e| format!("cannot create {}: {e}", path.display()))?;
     // PDF 1.4 like Decks' export: no compressed object streams, so the
     // page tree is plain text a test can count.
-    surface.restrict(gtk4::cairo::PdfVersion::_1_4).map_err(|e| e.to_string())?;
+    surface.restrict(cairo::PdfVersion::_1_4).map_err(|e| e.to_string())?;
     let cr = Context::new(&surface).map_err(|e| e.to_string())?;
     cr.save().map_err(|e| e.to_string())?;
     cr.scale(72.0 / 96.0, 72.0 / 96.0);
@@ -743,51 +743,55 @@ mod tests {
 
     /// The headless `--export-pdf` PDF is the rendered sheet: one PDF page
     /// sized to the used-range rect in points, with the sheet's text in it.
+    /// `draw_grid` reads the theme through libadwaita, so this runs on the
+    /// GTK test thread: under Xvfb in CI, a declared skip when display-less.
     #[test]
     fn the_pdf_export_is_one_page_sized_to_the_used_range() {
-        let state = export_state();
-        {
-            let st = state.borrow();
-            let mut sheet = st.sheet_mut();
-            *sheet.cell_mut(0, 0) = "Hello export".into();
-            *sheet.cell_mut(1, 2) = "42".into();
-        }
-        // The rect the export draws: used far edge clipped to the viewport.
-        let (w, h) = {
-            let st = state.borrow();
-            let sheet = st.sheet();
-            let (r, c) = sheet.used_extent().expect("two values");
-            assert_eq!((r, c), (1, 2));
-            let far_w = tables_core::sheet::col_x(c, 0.0, &sheet) + sheet.col_width(c);
-            let far_h = tables_core::sheet::row_y(r, 0.0, &sheet) + sheet.row_height(r);
-            (far_w.min(5000.0), far_h.min(5000.0))
-        };
-        let dir = std::env::temp_dir().join(format!("tables-export-pdf-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("out.pdf");
-        render_sheet_pdf(&state, 0.0, 0.0, 5000.0, 5000.0, (0.2, 0.4, 0.8), &path)
-            .expect("export the used range");
-        let bytes = std::fs::read(&path).unwrap();
-        assert!(bytes.starts_with(b"%PDF"), "a real PDF");
-        assert!(bytes.len() > 1000, "text and pages take space: {}", bytes.len());
-        let text = String::from_utf8_lossy(&bytes);
-        let page_objects = text.matches("/Type /Page").count() - text.matches("/Type /Pages").count();
-        assert_eq!(page_objects, 1, "one PDF page for the sheet");
-        // /MediaBox is the rect in points (pixels x 72/96); Cairo may
-        // print fractional points, so parse rather than match text.
-        let mb = text.find("/MediaBox").expect("a sized page");
-        let box_text = text[mb..].split(']').next().expect("a closed MediaBox");
-        let nums: Vec<f64> = box_text
-            .split(|ch: char| !(ch.is_ascii_digit() || ch == '.'))
-            .filter(|s| !s.is_empty())
-            .filter_map(|s| s.parse().ok())
-            .collect();
-        assert!(nums.len() >= 4, "a four-number MediaBox: {mb}");
-        let (mw, mh) = (nums[nums.len() - 2], nums[nums.len() - 1]);
-        assert!((mw - w * 72.0 / 96.0).abs() < 0.01, "page width {mw} for rect {w}");
-        assert!((mh - h * 72.0 / 96.0).abs() < 0.01, "page height {mh} for rect {h}");
-        // That the sheet's text lands on the page is checked by rasterising
-        // the PDF (pdftoppm) and looking, not here: Cairo may subset fonts.
+        suite_common::gtk_test::run(|| {
+            let state = export_state();
+            {
+                let st = state.borrow();
+                let mut sheet = st.sheet_mut();
+                *sheet.cell_mut(0, 0) = "Hello export".into();
+                *sheet.cell_mut(1, 2) = "42".into();
+            }
+            // The rect the export draws: used far edge clipped to the viewport.
+            let (w, h) = {
+                let st = state.borrow();
+                let sheet = st.sheet();
+                let (r, c) = sheet.used_extent().expect("two values");
+                assert_eq!((r, c), (1, 2));
+                let far_w = tables_core::sheet::col_x(c, 0.0, &sheet) + sheet.col_width(c);
+                let far_h = tables_core::sheet::row_y(r, 0.0, &sheet) + sheet.row_height(r);
+                (far_w.min(5000.0), far_h.min(5000.0))
+            };
+            let dir = std::env::temp_dir().join(format!("tables-export-pdf-{}", std::process::id()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let path = dir.join("out.pdf");
+            render_sheet_pdf(&state, 0.0, 0.0, 5000.0, 5000.0, (0.2, 0.4, 0.8), &path)
+                .expect("export the used range");
+            let bytes = std::fs::read(&path).unwrap();
+            assert!(bytes.starts_with(b"%PDF"), "a real PDF");
+            assert!(bytes.len() > 1000, "text and pages take space: {}", bytes.len());
+            let text = String::from_utf8_lossy(&bytes);
+            let page_objects = text.matches("/Type /Page").count() - text.matches("/Type /Pages").count();
+            assert_eq!(page_objects, 1, "one PDF page for the sheet");
+            // /MediaBox is the rect in points (pixels x 72/96); Cairo may
+            // print fractional points, so parse rather than match text.
+            let mb = text.find("/MediaBox").expect("a sized page");
+            let box_text = text[mb..].split(']').next().expect("a closed MediaBox");
+            let nums: Vec<f64> = box_text
+                .split(|ch: char| !(ch.is_ascii_digit() || ch == '.'))
+                .filter(|s| !s.is_empty())
+                .filter_map(|s| s.parse().ok())
+                .collect();
+            assert!(nums.len() >= 4, "a four-number MediaBox: {mb}");
+            let (mw, mh) = (nums[nums.len() - 2], nums[nums.len() - 1]);
+            assert!((mw - w * 72.0 / 96.0).abs() < 0.01, "page width {mw} for rect {w}");
+            assert!((mh - h * 72.0 / 96.0).abs() < 0.01, "page height {mh} for rect {h}");
+            // That the sheet's text lands on the page is checked by rasterising
+            // the PDF (pdftoppm) and looking, not here: Cairo may subset fonts.
+        });
     }
 
     #[test]
