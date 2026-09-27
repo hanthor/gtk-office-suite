@@ -344,7 +344,11 @@ pub fn draw_grid(
     let cell_text = suite_common::canvas_foreground(is_dark);
     // Editing chrome (selection wash, outline, fill handle) is not document
     // content; the render lab's capture leaves it out, as it does the caret.
-    let show_selection = !suite_common::render_dump::active();
+    // The headless --export-pdf hook sets GTK_OFFICE_EXPORT_PDF (not the
+    // render-dump dir), so it hides chrome the same way: the Calc reference
+    // never shows a selection.
+    let show_selection = !suite_common::render_dump::active()
+        && std::env::var_os(suite_common::render_dump::EXPORT_PDF_ENV).is_none();
     let range_wash = if is_dark { RANGE_WASH_DARK } else { RANGE_WASH };
     let canvas_bg = if is_dark { CANVAS_BG_DARK } else { CANVAS_BG };
 
@@ -664,6 +668,54 @@ pub fn draw_grid(
     cr.restore().unwrap();
 }
 
+/// Render the used range to a PDF at `path`: one page sized to the export
+/// rect in points — the headless `--export-pdf` hook
+/// (docs/TABLES-EXPORT-PARITY.md). The rect is the render-dump one (the used
+/// range's far edge clipped to the viewport `width`/`height`), drawn through
+/// `draw_grid` with the restored scroll offsets and `show_gridlines = false`,
+/// like the Calc reference (fixtures print without gridlines). An empty
+/// sheet is an error, mirroring Decks' "no slides to export" rather than an
+/// empty PDF.
+#[allow(clippy::too_many_arguments)]
+pub fn render_sheet_pdf(
+    state: &Rc<RefCell<crate::window::AppState>>,
+    scroll_x: f64, scroll_y: f64, width: f64, height: f64,
+    accent: (f64, f64, f64), path: &std::path::Path,
+) -> Result<(), String> {
+    let (w, h) = {
+        let st = state.borrow();
+        let sheet = st.sheet();
+        let Some((r, c)) = sheet.used_extent() else {
+            return Err("no cells to export".to_string());
+        };
+        let far_w = tables_core::sheet::col_x(c, scroll_x, &sheet) + sheet.col_width(c);
+        let far_h = tables_core::sheet::row_y(r, scroll_y, &sheet) + sheet.row_height(r);
+        (far_w.min(width), far_h.min(height))
+    };
+    if w <= 0.0 || h <= 0.0 {
+        return Err("no cells to export".to_string());
+    }
+    // PDF points are 1/72in; the grid draws in 1/96in pixels.
+    let (page_w, page_h) = (w * 72.0 / 96.0, h * 72.0 / 96.0);
+    let surface = gtk4::cairo::PdfSurface::new(page_w, page_h, path)
+        .map_err(|e| format!("cannot create {}: {e}", path.display()))?;
+    // PDF 1.4 like Decks' export: no compressed object streams, so the
+    // page tree is plain text a test can count.
+    surface.restrict(gtk4::cairo::PdfVersion::_1_4).map_err(|e| e.to_string())?;
+    let cr = Context::new(&surface).map_err(|e| e.to_string())?;
+    cr.save().map_err(|e| e.to_string())?;
+    cr.scale(72.0 / 96.0, 72.0 / 96.0);
+    draw_grid(&cr, state, w, h, scroll_x, scroll_y, false, &[], accent);
+    cr.restore().map_err(|e| e.to_string())?;
+    cr.show_page().map_err(|e| e.to_string())?;
+    drop(cr);
+    surface.finish();
+    match surface.status() {
+        Ok(()) => Ok(()),
+        Err(e) => Err(format!("cannot write {}: {e}", path.display())),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -678,5 +730,72 @@ mod tests {
         assert!((top - 100.1).abs() < 1e-9, "{top}");
         assert_eq!(cell_text_top(VAlign::Top, 100.0, 20.0, 17.9), 100.0 + CELL_PAD_V);
         assert!((cell_text_top(VAlign::Center, 100.0, 20.0, 18.0) - 101.0).abs() < 1e-9);
+    }
+
+    fn export_state() -> Rc<RefCell<crate::window::AppState>> {
+        let controller = tables_core::controller::WorkbookController::new(
+            tables_core::sheet::DEFAULT_ROWS,
+            tables_core::sheet::DEFAULT_COLS,
+        )
+        .expect("controller");
+        controller.state.clone()
+    }
+
+    /// The headless `--export-pdf` PDF is the rendered sheet: one PDF page
+    /// sized to the used-range rect in points, with the sheet's text in it.
+    #[test]
+    fn the_pdf_export_is_one_page_sized_to_the_used_range() {
+        let state = export_state();
+        {
+            let st = state.borrow();
+            let mut sheet = st.sheet_mut();
+            *sheet.cell_mut(0, 0) = "Hello export".into();
+            *sheet.cell_mut(1, 2) = "42".into();
+        }
+        // The rect the export draws: used far edge clipped to the viewport.
+        let (w, h) = {
+            let st = state.borrow();
+            let sheet = st.sheet();
+            let (r, c) = sheet.used_extent().expect("two values");
+            assert_eq!((r, c), (1, 2));
+            let far_w = tables_core::sheet::col_x(c, 0.0, &sheet) + sheet.col_width(c);
+            let far_h = tables_core::sheet::row_y(r, 0.0, &sheet) + sheet.row_height(r);
+            (far_w.min(5000.0), far_h.min(5000.0))
+        };
+        let dir = std::env::temp_dir().join(format!("tables-export-pdf-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("out.pdf");
+        render_sheet_pdf(&state, 0.0, 0.0, 5000.0, 5000.0, (0.2, 0.4, 0.8), &path)
+            .expect("export the used range");
+        let bytes = std::fs::read(&path).unwrap();
+        assert!(bytes.starts_with(b"%PDF"), "a real PDF");
+        assert!(bytes.len() > 1000, "text and pages take space: {}", bytes.len());
+        let text = String::from_utf8_lossy(&bytes);
+        let page_objects = text.matches("/Type /Page").count() - text.matches("/Type /Pages").count();
+        assert_eq!(page_objects, 1, "one PDF page for the sheet");
+        // /MediaBox is the rect in points (pixels x 72/96); Cairo prints
+        // whole numbers without decimals, so parse rather than match text.
+        let mb = text.find("/MediaBox").expect("a sized page");
+        let nums: Vec<f64> = text[mb..mb + 64]
+            .split(|ch: char| !(ch.is_ascii_digit() || ch == '.'))
+            .filter(|s| !s.is_empty())
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        assert!(nums.len() >= 4, "a four-number MediaBox: {mb}");
+        let (mw, mh) = (nums[nums.len() - 2], nums[nums.len() - 1]);
+        assert!((mw - w * 72.0 / 96.0).abs() < 0.01, "page width {mw} for rect {w}");
+        assert!((mh - h * 72.0 / 96.0).abs() < 0.01, "page height {mh} for rect {h}");
+        // That the sheet's text lands on the page is checked by rasterising
+        // the PDF (pdftoppm) and looking, not here: Cairo may subset fonts.
+    }
+
+    #[test]
+    fn exporting_an_empty_sheet_is_an_error_not_an_empty_pdf() {
+        let state = export_state();
+        let dir = std::env::temp_dir().join(format!("tables-export-pdf-empty-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let err = render_sheet_pdf(&state, 0.0, 0.0, 5000.0, 5000.0, (0.2, 0.4, 0.8), &dir.join("out.pdf"))
+            .unwrap_err();
+        assert!(err.contains("no cells"), "{err}");
     }
 }

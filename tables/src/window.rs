@@ -173,6 +173,28 @@ impl TablesWindow {
                 }
             });
             app.add_action(&act);
+            // Headless `--export-pdf <out>` (docs/TABLES-EXPORT-PARITY.md):
+            // the used-range rect `test-render-dump` snapshots — computed
+            // after `restore_saved_view`, so the frozen fixture's saved
+            // scroll is honoured — written as a PDF to GTK_OFFICE_EXPORT_PDF
+            // through the grid path (`render_sheet_pdf` on a PDF surface).
+            // main.rs schedules this after the window settles.
+            let (area, ctl, h, v) = (drawing_area.clone(), controller.clone(), h_adj.clone(), v_adj.clone());
+            let act = gtk4::gio::SimpleAction::new("test-export-pdf", None);
+            act.connect_activate(move |_, _| {
+                let Some(out) = std::env::var_os(suite_common::render_dump::EXPORT_PDF_ENV) else { return };
+                let state = ctl.borrow().state.clone();
+                crate::grid_render::restore_saved_view(&state, &h, &v);
+                let (aw, ah) = (area.width() as f64, area.height() as f64);
+                let accent = suite_common::accent_rgb(&area);
+                if let Err(e) = crate::grid_render::render_sheet_pdf(
+                    &state, h.value(), v.value(), aw, ah,
+                    accent, std::path::Path::new(&out),
+                ) {
+                    eprintln!("export-pdf: {e}");
+                }
+            });
+            app.add_action(&act);
         }
 
         // Column auto-fit (double-clicking a header divider) needs a

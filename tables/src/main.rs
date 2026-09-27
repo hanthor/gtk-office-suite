@@ -18,6 +18,33 @@ pub mod grid_area;
 
 fn main() {
     let suite = suite_common::SuiteApp::new("org.tunaos.tables");
+
+    // Headless `--export-pdf <out>` (docs/TABLES-EXPORT-PARITY.md): a real
+    // GApplication option, so `--help` documents it. Export implies the
+    // test-only actions, the same ones the render lab uses; connect_open
+    // schedules the export once the window settles.
+    suite.app.add_main_option(
+        suite_common::render_dump::EXPORT_PDF_FLAG,
+        gtk4::glib::Char::from(0u8),
+        gtk4::glib::OptionFlags::NONE,
+        gtk4::glib::OptionArg::Filename,
+        "Export the opened spreadsheet to PDF with no dialogs and quit",
+        Some("OUT"),
+    );
+    suite.app.connect_handle_local_options(|_, options| {
+        match suite_common::render_dump::export_pdf_path(options) {
+            Ok(Some(out)) => {
+                std::env::set_var("GTK_OFFICE_TEST_MODE", "1");
+                std::env::set_var(suite_common::render_dump::EXPORT_PDF_ENV, &out);
+            }
+            Ok(None) => {}
+            Err(e) => {
+                eprintln!("tables: {e}");
+                return std::ops::ControlFlow::Break(gtk4::glib::ExitCode::FAILURE);
+            }
+        }
+        std::ops::ControlFlow::Continue(())
+    });
     let shortcuts: &[(&str, &[(&str, &str)])] = &[
         ("Editing", &[
             ("Undo", "<Control>z"),
@@ -60,6 +87,10 @@ fn main() {
             *store = Some(win);
         }
         store.as_ref().unwrap().present();
+        if std::env::var_os(suite_common::render_dump::EXPORT_PDF_ENV).is_some() {
+            eprintln!("tables: --export-pdf needs an input file to export");
+            app.quit();
+        }
     });
 
     // CLI / file-manager launches: `tables budget.xlsx` opens the file.
@@ -99,6 +130,9 @@ fn main() {
         }
         win.present();
         suite_common::render_dump::schedule(app);
+        if std::env::var_os(suite_common::render_dump::EXPORT_PDF_ENV).is_some() {
+            suite_common::render_dump::schedule_export(app);
+        }
     });
     suite.run();
 }
