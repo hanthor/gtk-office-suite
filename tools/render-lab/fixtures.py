@@ -80,6 +80,8 @@ EXPORT = {
     "letters/page-break",
     "letters/pagination",
     "letters/footnotes",
+    "letters/footnote-continued",
+    "letters/nested-list",
 }
 
 

@@ -129,7 +129,7 @@ class ExportOptInTest(unittest.TestCase):
         for key in fixtures.EXPORT:
             app, _ = key.split("/", 1)
             self.assertIn(app, ("letters", "decks"), f"{key}: xlsx is out of scope")
-        self.assertLessEqual(len(fixtures.EXPORT), 33, "batch 7: 28 + 5 green-baseline fixtures; grow deliberately")
+        self.assertLessEqual(len(fixtures.EXPORT), 35, "batch 8: 33 + 2 docx fixtures; 3 tables/* requested but xlsx is out of scope")
 
     def test_every_opt_in_fixture_is_defined(self):
         # An EXPORT key with no save() site would score missing forever.
